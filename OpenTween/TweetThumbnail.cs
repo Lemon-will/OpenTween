@@ -221,7 +221,7 @@ namespace OpenTween
             }
         }
 
-        private void pictureBox_MouseWheel(object sender, MouseEventArgs e)
+        protected void pictureBox_MouseWheel(object sender, MouseEventArgs e)
         {
             if (e.Delta > 0)
                 this.ScrollUp();
@@ -229,7 +229,7 @@ namespace OpenTween
                 this.ScrollDown();
         }
 
-        private void pictureBox_DoubleClick(object sender, EventArgs e)
+        protected void pictureBox_DoubleClick(object sender, EventArgs e)
         {
             if (((PictureBox)sender).Tag is ThumbnailInfo thumb)
                 this.OpenImage(thumb);
