@@ -363,6 +363,7 @@ namespace OpenTween
 
         private async Task DoTranslation(string str)
         {
+            return; //API Keyがないため一時的に何も実行しないようにする
             if (string.IsNullOrEmpty(str))
                 return;
 

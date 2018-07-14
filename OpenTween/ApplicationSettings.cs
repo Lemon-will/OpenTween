@@ -59,12 +59,12 @@ namespace OpenTween
         /// <summary>
         /// フィードバック送信先 (メール)
         /// </summary>
-        public const string FeedbackEmailAddress = "kim.upsilon@bucyou.net";
+        public const string FeedbackEmailAddress = "lemonwill.poke@gmail.com";
 
         /// <summary>
         /// フィードバック送信先 (Twitter)
         /// </summary>
-        public const string FeedbackTwitterName = "@OpenTween";
+        public const string FeedbackTwitterName = "@Lemon_will";
 
         /// <summary>
         /// FeedbackTwitterName のユーザー宛にエラーレポートの DM を送信可能であるか
@@ -80,7 +80,7 @@ namespace OpenTween
         /// <summary>
         /// 「ヘルプ」メニューの「(アプリ名) ウェブサイト」クリック時に外部ブラウザで表示する URL
         /// </summary>
-        public const string WebsiteUrl = "http://sourceforge.jp/projects/opentween/wiki/FrontPage";
+        public const string WebsiteUrl = "https://github.com/Lemon-will/OpenTweenVxV";
 
         /// <summary>
         /// 「ヘルプ」メニューの「ショートカットキー一覧」クリック時に外部ブラウザで表示する URL
@@ -104,13 +104,13 @@ namespace OpenTween
 
         //=====================================================================
         // Twitter
-        // https://dev.twitter.com/ から取得できます。
+        // https://apps.twitter.com/ から取得できます。
 
         /// <summary>
         /// Twitter コンシューマーキー
         /// </summary>
-        public const string TwitterConsumerKey = "zIoJPq3FsuViPTAs89FetDHYz";
-        public const string TwitterConsumerSecret = "prTAs2fqLv12nHxlMoLQZT8AkpZt0yYb8A7ktGS2VYeRj0TddS";
+        public const string TwitterConsumerKey = "JVTaFFS6g5yhdJ6PyioQ2aqLO";
+        public const string TwitterConsumerSecret = "iyMJHhveCXDGlgiuUB2A5WcMdiG8NlTGL4CSBIgk8qWqfjHkjj";
 
         //=====================================================================
         // Foursquare
@@ -119,12 +119,12 @@ namespace OpenTween
         /// <summary>
         /// Foursquare Client Id
         /// </summary>
-        public const string FoursquareClientId = "5H3K5YQPT55DNQUFEOAJFNJA5D01ZJGO2ITEAJ3ASRIDONUB";
+        public const string FoursquareClientId = "14VP4NHTQGX1R0TBKSFY1CBSMMZQ0FZY5QZ3MN554JLYXGNZ";
 
         /// <summary>
         /// Foursquare Client Secret
         /// </summary>
-        public const string FoursquareClientSecret = "JFRHP1L451M3AEPF11UZLTIIUZCZTZRVHVOWB5TQ0AJOVPBB";
+        public const string FoursquareClientSecret = "HLEKQ55GPT2JRVOMV14SSIPXWJ04R0QTOYLXCHWSZDU21GUK";
 
         //=====================================================================
         // bit.ly
@@ -133,12 +133,12 @@ namespace OpenTween
         /// <summary>
         /// bit.ly Client ID
         /// </summary>
-        public const string BitlyClientId = "ddab8ec50f4459c315cbde9d923cf490923b6d2e";
+        public const string BitlyClientId = "66c62ed278f40ad0372949dc910c20bad78074d4";
 
         /// <summary>
         /// bit.ly Client Secret
         /// </summary>
-        public const string BitlyClientSecret = "485c9d03dd264f8eeb4fc65d38e2762c4420cee7";
+        public const string BitlyClientSecret = "a77055ca2451f26cd48d79ece9ae2c237bb9731b";
 
         //=====================================================================
         // TINAMI
@@ -147,7 +147,7 @@ namespace OpenTween
         /// <summary>
         /// TINAMI APIキー
         /// </summary>
-        public const string TINAMIApiKey = "4f48bb4858d36";
+        public const string TINAMIApiKey = "5a8c09a2ac4ea";
 
         //=====================================================================
         // Microsoft Translator API (Cognitive Service)
@@ -155,8 +155,9 @@ namespace OpenTween
 
         /// <summary>
         /// Translator Text API Subscription Key
+        /// 一時的にDeplicate
         /// </summary>
-        public readonly static string TranslatorSubscriptionKey = "6c47d2ea341148bf856bdbfafd429db7";
+        public readonly static string TranslatorSubscriptionKey = "";
 
         //=====================================================================
         // Imgur
@@ -165,12 +166,12 @@ namespace OpenTween
         /// <summary>
         /// Imgur Client ID
         /// </summary>
-        public readonly static string ImgurClientID = "a5fff36fb83568c";
+        public readonly static string ImgurClientID = "6f2eaecf24070c9";
 
         /// <summary>
         /// Imgur Client Secret
         /// </summary>
-        public readonly static string ImgurClientSecret = "af5d668a9aa83b34a8f0f735e12073edafbc9a5d";
+        public readonly static string ImgurClientSecret = "b3e298a71472f265ea07472be4d8e11ebd80b135";
 
         //=====================================================================
         // Mobypicture
@@ -179,7 +180,7 @@ namespace OpenTween
         /// <summary>
         /// Mobypicture Developer Key
         /// </summary>
-        public readonly static string MobypictureKey = "quPWTX0UrPHxqdH7";
+        public readonly static string MobypictureKey = "L0wQytgNfgaSDot4";
 
         //=====================================================================
         // Tumblr
@@ -188,6 +189,6 @@ namespace OpenTween
         /// <summary>
         /// Tumblr OAuth Consumer Key
         /// </summary>
-        public readonly static string TumblrConsumerKey = "Nsk62V6wMIqVNbiGyN0g3aDGBlgU7Fcb9GJ8Se0z2MUDHAY15l";
+        public readonly static string TumblrConsumerKey = "6CmuO1aDouGGKP9QUTVAQVLyL0lfcjxxDUUQE4CJ9aKtAVkH5e";
     }
 }
