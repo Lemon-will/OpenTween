@@ -137,6 +137,13 @@
     <Compile Include="FilterDialog.Designer.cs">
       <DependentUpon>FilterDialog.cs</DependentUpon>
     </Compile>
+    <Compile Include="FormUtil.cs" />
+    <Compile Include="ImageDetailBrowser.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ImageDetailBrowser.designer.cs">
+      <DependentUpon>ImageDetailBrowser.cs</DependentUpon>
+    </Compile>
     <Compile Include="IndexedSortedSet.cs" />
     <Compile Include="LoginDialog.cs">
       <SubType>Form</SubType>
@@ -183,6 +190,12 @@
       <DependentUpon>TweetDetailsView.cs</DependentUpon>
     </Compile>
     <Compile Include="TweetExtractor.cs" />
+    <Compile Include="TwitterFullImage.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="TwitterFullImage.designer.cs">
+      <DependentUpon>TwitterFullImage.cs</DependentUpon>
+    </Compile>
     <Compile Include="WaitingDialog.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -475,6 +488,9 @@
     <EmbeddedResource Include="HashtagManage.resx">
       <DependentUpon>HashtagManage.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="ImageDetailBrowser.resx">
+      <DependentUpon>ImageDetailBrowser.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="InputDialog.en.resx">
       <DependentUpon>InputDialog.cs</DependentUpon>
     </EmbeddedResource>
@@ -531,6 +547,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="TweetDetailsView.resx">
       <DependentUpon>TweetDetailsView.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="TwitterFullImage.resx">
+      <DependentUpon>TwitterFullImage.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="WaitingDialog.resx">
       <DependentUpon>WaitingDialog.cs</DependentUpon>

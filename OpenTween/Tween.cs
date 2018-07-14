@@ -5653,6 +5653,36 @@ namespace OpenTween
             catch (OperationCanceledException) { }
         }
 
+        /// <summary>
+        /// 画像詳細表示に使用する CancellationToken の生成元
+        /// </summary>
+        private CancellationTokenSource imageDetailTokenSource = null;
+        public void ShowImageDetailBrowser()
+        {
+            var oldTokenSource = Interlocked.Exchange(ref this.imageDetailTokenSource, new CancellationTokenSource());
+            oldTokenSource?.Cancel();
+
+            var token = this.imageDetailTokenSource.Token;
+            try
+            {
+                var browser = new ImageDetailBrowser(_curPost, token);
+                browser.ShowDialog();
+            }
+            catch (InvalidOperationException e) // 途中で死んだ場合のオブジェクトを確実に殺す
+            {
+                Console.WriteLine(e.Message);
+                Console.WriteLine(e.Source + "が原因です。");
+                imageDetailTokenSource?.Cancel();
+            }
+            catch (ArgumentException e)
+            {
+                Console.WriteLine(e.Message);
+                Console.WriteLine(e.Source + "が原因です。");
+                imageDetailTokenSource?.Cancel();
+            }
+        }
+
+
         private async void MatomeMenuItem_Click(object sender, EventArgs e)
             => await this.OpenApplicationWebsite();
 
@@ -6255,6 +6285,11 @@ namespace OpenTween
                     .FocusedOn(FocusedControl.ListTab)
                     .OnlyWhen(() => !this.SplitContainer3.Panel2Collapsed)
                     .Do(() => this.OpenThumbnailPicture(this.tweetThumbnail1.Thumbnail)),
+                    
+                ShortcutCommand.Create(Keys.D, Keys.Control | Keys.Shift | Keys.Enter)
+                    .FocusedOn(FocusedControl.ListTab)
+                    .OnlyWhen(() => !this.SplitContainer3.Panel2Collapsed && this._curPost.Media.Count > 0)
+                    .Do(() => this.BeginInvoke((MethodInvoker)(() => ShowImageDetailBrowser()))),    //CommonKeyDownが正常に動かないので、非同期に機能させる
             };
         }
 
