@@ -78,6 +78,10 @@ namespace OpenTween.Connection
 
         public async Task<T> GetAsync<T>(Uri uri, IDictionary<string, string> param, string endpointName)
         {
+            // レートリミット規制中はAPIリクエストを送信せずに直ちにエラーを発生させる
+            if (endpointName != null)
+                this.ThrowIfRateLimitExceeded(endpointName);
+
             var requestUri = new Uri(RestApiBase, uri);
 
             if (param != null)
@@ -90,11 +94,11 @@ namespace OpenTween.Connection
                 using (var response = await this.http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead)
                     .ConfigureAwait(false))
                 {
-                    await this.CheckStatusCode(response)
-                        .ConfigureAwait(false);
-
                     if (endpointName != null)
                         MyCommon.TwitterApiInfo.UpdateFromHeader(response.Headers, endpointName);
+
+                    await this.CheckStatusCode(response)
+                        .ConfigureAwait(false);
 
                     using (var content = response.Content)
                     {
@@ -119,6 +123,28 @@ namespace OpenTween.Connection
             catch (OperationCanceledException ex)
             {
                 throw TwitterApiException.CreateFromException(ex);
+            }
+        }
+
+        /// <summary>
+        /// 指定されたエンドポイントがレートリミット規制中であれば例外を発生させる
+        /// </summary>
+        private void ThrowIfRateLimitExceeded(string endpointName)
+        {
+            var limit = MyCommon.TwitterApiInfo.AccessLimit[endpointName];
+            if (limit == null)
+                return;
+
+            if (limit.AccessLimitRemain == 0 && limit.AccessLimitResetDate > DateTimeUtc.Now)
+            {
+                var error = new TwitterError
+                {
+                    Errors = new[]
+                    {
+                        new TwitterErrorItem { Code = TwitterErrorCode.RateLimit, Message = "" },
+                    },
+                };
+                throw new TwitterApiException(0, error, "");
             }
         }
 
@@ -153,7 +179,14 @@ namespace OpenTween.Connection
 
             try
             {
-                return await this.httpStreaming.GetStreamAsync(requestUri)
+                var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
+                var response = await this.httpStreaming.SendAsync(request, HttpCompletionOption.ResponseHeadersRead)
+                    .ConfigureAwait(false);
+
+                await this.CheckStatusCode(response)
+                    .ConfigureAwait(false);
+
+                return await response.Content.ReadAsStreamAsync()
                     .ConfigureAwait(false);
             }
             catch (HttpRequestException ex)
@@ -322,6 +355,30 @@ namespace OpenTween.Connection
             }
         }
 
+        public async Task DeleteAsync(Uri uri)
+        {
+            var requestUri = new Uri(RestApiBase, uri);
+            var request = new HttpRequestMessage(HttpMethod.Delete, requestUri);
+
+            try
+            {
+                using (var response = await this.http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead)
+                    .ConfigureAwait(false))
+                {
+                    await this.CheckStatusCode(response)
+                        .ConfigureAwait(false);
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                throw TwitterApiException.CreateFromException(ex);
+            }
+            catch (OperationCanceledException ex)
+            {
+                throw TwitterApiException.CreateFromException(ex);
+            }
+        }
+
         protected async Task CheckStatusCode(HttpResponseMessage response)
         {
             var statusCode = response.StatusCode;
@@ -360,7 +417,7 @@ namespace OpenTween.Connection
                     Twitter.AccountState = MyCommon.ACCOUNT_STATE.Invalid;
                 }
 
-                throw new TwitterApiException(error, responseText);
+                throw new TwitterApiException(statusCode, error, responseText);
             }
             catch (SerializationException)
             {
@@ -404,7 +461,7 @@ namespace OpenTween.Connection
         private void Networking_WebProxyChanged(object sender, EventArgs e)
             => this.InitializeHttpClients();
 
-        public static async Task<Tuple<string, string>> GetRequestTokenAsync()
+        public static async Task<(string Token, string TokenSecret)> GetRequestTokenAsync()
         {
             var param = new Dictionary<string, string>
             {
@@ -413,14 +470,14 @@ namespace OpenTween.Connection
             var response = await GetOAuthTokenAsync(new Uri("https://api.twitter.com/oauth/request_token"), param, oauthToken: null)
                 .ConfigureAwait(false);
 
-            return Tuple.Create(response["oauth_token"], response["oauth_token_secret"]);
+            return (response["oauth_token"], response["oauth_token_secret"]);
         }
 
-        public static Uri GetAuthorizeUri(Tuple<string, string> requestToken, string screenName = null)
+        public static Uri GetAuthorizeUri((string Token, string TokenSecret) requestToken, string screenName = null)
         {
             var param = new Dictionary<string, string>
             {
-                ["oauth_token"] = requestToken.Item1,
+                ["oauth_token"] = requestToken.Token,
             };
 
             if (screenName != null)
@@ -429,7 +486,7 @@ namespace OpenTween.Connection
             return new Uri("https://api.twitter.com/oauth/authorize?" + MyCommon.BuildQueryString(param));
         }
 
-        public static async Task<IDictionary<string, string>> GetAccessTokenAsync(Tuple<string, string> requestToken, string verifier)
+        public static async Task<IDictionary<string, string>> GetAccessTokenAsync((string Token, string TokenSecret) requestToken, string verifier)
         {
             var param = new Dictionary<string, string>
             {
@@ -442,11 +499,11 @@ namespace OpenTween.Connection
         }
 
         private static async Task<IDictionary<string, string>> GetOAuthTokenAsync(Uri uri, IDictionary<string, string> param,
-            Tuple<string, string> oauthToken)
+            (string Token, string TokenSecret)? oauthToken)
         {
             HttpClient authorizeClient;
             if (oauthToken != null)
-                authorizeClient = InitializeHttpClient(oauthToken.Item1, oauthToken.Item2);
+                authorizeClient = InitializeHttpClient(oauthToken.Value.Token, oauthToken.Value.TokenSecret);
             else
                 authorizeClient = InitializeHttpClient("", "");
 

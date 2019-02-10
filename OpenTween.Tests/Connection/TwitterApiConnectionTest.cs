@@ -493,5 +493,32 @@ namespace OpenTween.Connection
                 Assert.Equal(0, mockHandler.QueueCount);
             }
         }
+
+        [Fact]
+        public async Task DeleteAsync_Test()
+        {
+            using (var mockHandler = new HttpMessageHandlerMock())
+            using (var http = new HttpClient(mockHandler))
+            using (var apiConnection = new TwitterApiConnection("", ""))
+            {
+                apiConnection.http = http;
+
+                mockHandler.Enqueue(x =>
+                {
+                    Assert.Equal(HttpMethod.Delete, x.Method);
+                    Assert.Equal("https://api.twitter.com/1.1/hoge/tetete.json",
+                        x.RequestUri.AbsoluteUri);
+
+                    return new HttpResponseMessage(HttpStatusCode.NoContent);
+                });
+
+                var endpoint = new Uri("hoge/tetete.json", UriKind.Relative);
+
+                await apiConnection.DeleteAsync(endpoint)
+                    .ConfigureAwait(false);
+
+                Assert.Equal(0, mockHandler.QueueCount);
+            }
+        }
     }
 }

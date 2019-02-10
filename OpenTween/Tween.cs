@@ -169,7 +169,7 @@ namespace OpenTween
         private int _hisIdx;                  //発言履歴カレントインデックス
 
         //発言投稿時のAPI引数（発言編集時に設定。手書きreplyでは設定されない）
-        private Tuple<long, string> inReplyTo = null; // リプライ先のステータスID・スクリーン名
+        private (long StatusId, string ScreenName)? inReplyTo = null; // リプライ先のステータスID・スクリーン名
 
         //時速表示用
         private List<DateTimeUtc> _postTimestamps = new List<DateTimeUtc>();
@@ -274,6 +274,7 @@ namespace OpenTween
         private bool _colorize = false;
 
         private System.Timers.Timer TimerTimeline = new System.Timers.Timer();
+        private ThrottlingTimer RefreshThrottlingTimer;
 
         private string recommendedStatusFooter;
         private bool urlMultibyteSplit = false;
@@ -303,7 +304,7 @@ namespace OpenTween
         }
 
         private Stack<ReplyChain> replyChains; //[, ]でのリプライ移動の履歴
-        private Stack<ValueTuple<TabPage, PostClass>> selectPostChains = new Stack<ValueTuple<TabPage, PostClass>>(); //ポスト選択履歴
+        private Stack<(TabPage, PostClass)> selectPostChains = new Stack<(TabPage, PostClass)>(); //ポスト選択履歴
 
         //検索処理タイプ
         internal enum SEARCHTYPE
@@ -316,18 +317,16 @@ namespace OpenTween
         private class StatusTextHistory
         {
             public string status = "";
-            public long? inReplyToId = null;
-            public string inReplyToName = null;
+            public (long StatusId, string ScreenName)? inReplyTo = null;
             public string imageService = "";      //画像投稿サービス名
             public IMediaItem[] mediaItems = null;
             public StatusTextHistory()
             {
             }
-            public StatusTextHistory(string status, long? replyToId, string replyToName)
+            public StatusTextHistory(string status, (long StatusId, string ScreenName)? inReplyTo)
             {
                 this.status = status;
-                this.inReplyToId = replyToId;
-                this.inReplyToName = replyToName;
+                this.inReplyTo = inReplyTo;
             }
         }
 
@@ -1107,6 +1106,11 @@ namespace OpenTween
             }
 
             //タイマー設定
+
+            var streamingRefreshInterval = TimeSpan.FromSeconds(SettingManager.Common.UserstreamPeriod);
+            this.RefreshThrottlingTimer = new ThrottlingTimer(streamingRefreshInterval,
+                () => this.InvokeAsync(() => this.RefreshTimeline()));
+
             TimerTimeline.AutoReset = true;
             TimerTimeline.SynchronizingObject = this;
             //Recent取得間隔
@@ -1268,6 +1272,15 @@ namespace OpenTween
         private void TimerInterval_Changed(object sender, IntervalChangedEventArgs e) //Handles SettingDialog.IntervalChanged
         {
             if (!TimerTimeline.Enabled) return;
+
+            if (e.UserStream)
+            {
+                var interval = TimeSpan.FromSeconds(SettingManager.Common.UserstreamPeriod);
+                var newTimer = new ThrottlingTimer(interval, () => this.InvokeAsync(() => this.RefreshTimeline()));
+                var oldTimer = Interlocked.Exchange(ref this.RefreshThrottlingTimer, newTimer);
+                oldTimer.Dispose();
+            }
+
             ResetTimers = e;
         }
 
@@ -1279,7 +1292,6 @@ namespace OpenTween
         private static int pubSearchCounter = 0;
         private static int userTimelineCounter = 0;
         private static int listsCounter = 0;
-        private static int usCounter = 0;
         private static int ResumeWait = 0;
         private static int refreshFollowers = 0;
 
@@ -1291,7 +1303,6 @@ namespace OpenTween
             if (pubSearchCounter > 0) Interlocked.Decrement(ref pubSearchCounter);
             if (userTimelineCounter > 0) Interlocked.Decrement(ref userTimelineCounter);
             if (listsCounter > 0) Interlocked.Decrement(ref listsCounter);
-            if (usCounter > 0) Interlocked.Decrement(ref usCounter);
             Interlocked.Increment(ref refreshFollowers);
 
             var refreshTasks = new List<Task>();
@@ -1338,13 +1349,6 @@ namespace OpenTween
                 if (!ResetTimers.Lists)
                     refreshTasks.Add(this.RefreshTabAsync<ListTimelineTabModel>());
                 ResetTimers.Lists = false;
-            }
-            if (ResetTimers.UserStream || usCounter <= 0 && SettingManager.Common.UserstreamPeriod > 0)
-            {
-                Interlocked.Exchange(ref usCounter, SettingManager.Common.UserstreamPeriod);
-                if (this.tw.UserStreamActive)
-                    this.RefreshTimeline();
-                ResetTimers.UserStream = false;
             }
             if (refreshFollowers > 6 * 3600)
             {
@@ -1572,7 +1576,7 @@ namespace OpenTween
             {
                 return new ListViewSelection
                 {
-                    SelectedStatusIds = new long[0],
+                    SelectedStatusIds = Array.Empty<long>(),
                     SelectionMarkStatusId = null,
                     FocusedStatusId = null,
                 };
@@ -2059,10 +2063,10 @@ namespace OpenTween
             else if (TargetPost.IsReply)
                 //自分宛返信
                 cl = _clAtSelf;
-            else if (BasePost.ReplyToList.Any(x => x.Item1 == TargetPost.UserId))
+            else if (BasePost.ReplyToList.Any(x => x.UserId == TargetPost.UserId))
                 //返信先
                 cl = _clAtFromTarget;
-            else if (TargetPost.ReplyToList.Any(x => x.Item1 == BasePost.UserId))
+            else if (TargetPost.ReplyToList.Any(x => x.UserId == BasePost.UserId))
                 //その人への返信
                 cl = _clAtTarget;
             else if (TargetPost.ScreenName.Equals(BasePost.ScreenName, StringComparison.OrdinalIgnoreCase))
@@ -2073,6 +2077,36 @@ namespace OpenTween
                 cl = _clListBackcolor;
 
             return cl;
+        }
+
+        private void StatusTextHistoryBack()
+        {
+            if (!string.IsNullOrWhiteSpace(this.StatusText.Text))
+                this._history[_hisIdx] = new StatusTextHistory(this.StatusText.Text, this.inReplyTo);
+
+            this._hisIdx -= 1;
+            if (this._hisIdx < 0)
+                this._hisIdx = 0;
+
+            var historyItem = this._history[this._hisIdx];
+            this.inReplyTo = historyItem.inReplyTo;
+            this.StatusText.Text = historyItem.status;
+            this.StatusText.SelectionStart = this.StatusText.Text.Length;
+        }
+
+        private void StatusTextHistoryForward()
+        {
+            if (!string.IsNullOrWhiteSpace(this.StatusText.Text))
+                this._history[this._hisIdx] = new StatusTextHistory(this.StatusText.Text, this.inReplyTo);
+
+            this._hisIdx += 1;
+            if (this._hisIdx > this._history.Count - 1)
+                this._hisIdx = this._history.Count - 1;
+
+            var historyItem = this._history[this._hisIdx];
+            this.inReplyTo = historyItem.inReplyTo;
+            this.StatusText.Text = historyItem.status;
+            this.StatusText.SelectionStart = this.StatusText.Text.Length;
         }
 
         private async void PostButton_Click(object sender, EventArgs e)
@@ -2112,9 +2146,7 @@ namespace OpenTween
                     return;
             }
 
-            var inReplyToStatusId = this.inReplyTo?.Item1;
-            var inReplyToScreenName = this.inReplyTo?.Item2;
-            _history[_history.Count - 1] = new StatusTextHistory(StatusText.Text, inReplyToStatusId, inReplyToScreenName);
+            _history[_history.Count - 1] = new StatusTextHistory(StatusText.Text, this.inReplyTo);
 
             if (SettingManager.Common.Nicoms)
             {
@@ -2142,24 +2174,24 @@ namespace OpenTween
                 // auto_populate_reply_metadata や attachment_url を使用しなくても 140 字以内に
                 // 収まる場合はこれらのオプションを使用せずに投稿する
                 status.Text = statusTextCompat;
-                status.InReplyToStatusId = this.inReplyTo?.Item1;
+                status.InReplyToStatusId = this.inReplyTo?.StatusId;
             }
             else
             {
                 status.Text = this.FormatStatusTextExtended(this.StatusText.Text, out var autoPopulatedUserIds, out var attachmentUrl);
-                status.InReplyToStatusId = this.inReplyTo?.Item1;
+                status.InReplyToStatusId = this.inReplyTo?.StatusId;
 
                 status.AttachmentUrl = attachmentUrl;
 
                 // リプライ先がセットされていても autoPopulatedUserIds が空の場合は auto_populate_reply_metadata を有効にしない
                 //  (非公式 RT の場合など)
-                var replyToPost = this.inReplyTo != null ? this._statuses[this.inReplyTo.Item1] : null;
+                var replyToPost = this.inReplyTo != null ? this._statuses[this.inReplyTo.Value.StatusId] : null;
                 if (replyToPost != null && autoPopulatedUserIds.Length != 0)
                 {
                     status.AutoPopulateReplyMetadata = true;
 
                     // ReplyToList のうち autoPopulatedUserIds に含まれていないユーザー ID を抽出
-                    status.ExcludeReplyUserIds = replyToPost.ReplyToList.Select(x => x.Item1).Except(autoPopulatedUserIds)
+                    status.ExcludeReplyUserIds = replyToPost.ReplyToList.Select(x => x.UserId).Except(autoPopulatedUserIds)
                         .ToArray();
                 }
             }
@@ -2281,7 +2313,7 @@ namespace OpenTween
 
             try
             {
-                await tab.RefreshAsync(this.tw, backward, this._initial, this.workerProgress);
+                await Task.Run(() => tab.RefreshAsync(this.tw, backward, this._initial, this.workerProgress));
                 this.RefreshTimeline();
             }
             catch (WebApiException ex)
@@ -2594,6 +2626,7 @@ namespace OpenTween
 
             p.Report("Posting...");
 
+            PostClass post = null;
             var errMsg = "";
 
             try
@@ -2608,7 +2641,7 @@ namespace OpenTween
                             .ConfigureAwait(false);
                     }
 
-                    await this.tw.PostStatus(postParamsWithMedia)
+                    post = await this.tw.PostStatus(postParamsWithMedia)
                         .ConfigureAwait(false);
                 });
 
@@ -2661,6 +2694,9 @@ namespace OpenTween
                 }
                 else
                 {
+                    this.StatusTextHistoryBack();
+                    this.StatusText.Focus();
+
                     // 連投モードのときだけEnterイベントが起きないので強制的に背景色を戻す
                     if (SettingManager.Common.FocusLockToStatusText)
                         this.StatusText_Enter(this.StatusText, EventArgs.Empty);
@@ -2687,12 +2723,20 @@ namespace OpenTween
 
             this.SetMainWindowTitle();
 
-            if (SettingManager.Common.PostAndGet)
+            // TLに反映
+            if (!this.tw.UserStreamActive)
             {
-                if (this.tw.UserStreamActive)
-                    this.RefreshTimeline();
-                else
+                if (SettingManager.Common.PostAndGet)
                     await this.RefreshTabAsync<HomeTabModel>();
+                else
+                {
+                    if (post != null)
+                    {
+                        this._statuses.AddPost(post);
+                        this._statuses.DistributePosts();
+                        this.RefreshTimeline();
+                    }
+                }
             }
         }
 
@@ -2705,9 +2749,6 @@ namespace OpenTween
                 var progress = new Progress<string>(x => this.StatusLabel.Text = x);
 
                 await this.RetweetAsyncInternal(progress, this.workerCts.Token, statusIds);
-
-                if (SettingManager.Common.PostAndGet && !this.tw.UserStreamActive)
-                    await this.RefreshTabAsync<HomeTabModel>();
             }
             catch (WebApiException ex)
             {
@@ -2736,10 +2777,16 @@ namespace OpenTween
 
             p.Report("Posting...");
 
-            foreach (var statusId in statusIds)
+            var posts = new List<PostClass>();
+
+            await Task.Run(async () =>
             {
-                await this.tw.PostRetweet(statusId, read).ConfigureAwait(false);
-            }
+                foreach (var statusId in statusIds)
+                {
+                    var post = await this.tw.PostRetweet(statusId, read).ConfigureAwait(false);
+                    if (post != null) posts.Add(post);
+                }
+            });
 
             if (ct.IsCancellationRequested)
                 return;
@@ -2753,6 +2800,22 @@ namespace OpenTween
             {
                 if (this._postTimestamps[i] < oneHour)
                     this._postTimestamps.RemoveAt(i);
+            }
+
+            // TLに反映
+            if (!this.tw.UserStreamActive)
+            {
+                // 自分のRTはTLの更新では取得できない場合があるので、
+                // 投稿時取得の有無に関わらず追加しておく
+                posts.ForEach(post => this._statuses.AddPost(post));
+
+                if (SettingManager.Common.PostAndGet)
+                    await this.RefreshTabAsync<HomeTabModel>();
+                else
+                {
+                    this._statuses.DistributePosts();
+                    this.RefreshTimeline();
+                }
             }
         }
 
@@ -3306,8 +3369,7 @@ namespace OpenTween
                     {
                         if (post.IsDm)
                         {
-                            await this.twitterApi.DirectMessagesDestroy(post.StatusId)
-                                .IgnoreResponse();
+                            await this.twitterApi.DirectMessagesEventsDestroy(post.StatusId.ToString(CultureInfo.InvariantCulture));
                         }
                         else
                         {
@@ -4533,7 +4595,7 @@ namespace OpenTween
         {
             List<long> _autoPopulatedUserIds = new List<long>();
 
-            var replyToPost = this.inReplyTo != null ? this._statuses[this.inReplyTo.Item1] : null;
+            var replyToPost = this.inReplyTo != null ? this._statuses[this.inReplyTo.Value.StatusId] : null;
             if (replyToPost != null)
             {
                 if (statusText.StartsWith($"@{replyToPost.ScreenName} ", StringComparison.Ordinal))
@@ -4541,12 +4603,12 @@ namespace OpenTween
                     statusText = statusText.Substring(replyToPost.ScreenName.Length + 2);
                     _autoPopulatedUserIds.Add(replyToPost.UserId);
 
-                    foreach (var reply in replyToPost.ReplyToList)
+                    foreach (var (userId, screenName) in replyToPost.ReplyToList)
                     {
-                        if (statusText.StartsWith($"@{reply.Item2} ", StringComparison.Ordinal))
+                        if (statusText.StartsWith($"@{screenName} ", StringComparison.Ordinal))
                         {
-                            statusText = statusText.Substring(reply.Item2.Length + 2);
-                            _autoPopulatedUserIds.Add(reply.Item1);
+                            statusText = statusText.Substring(screenName.Length + 2);
+                            _autoPopulatedUserIds.Add(userId);
                         }
                     }
                 }
@@ -4636,7 +4698,7 @@ namespace OpenTween
                 disableFooter = true;
 
             // 自分宛のリプライの場合は先頭の「@screen_name 」の部分を除去する (in_reply_to_status_id は維持される)
-            if (this.inReplyTo != null && this.inReplyTo.Item2 == this.tw.Username)
+            if (this.inReplyTo != null && this.inReplyTo.Value.ScreenName == this.tw.Username)
             {
                 var mentionSelf = $"@{this.tw.Username} ";
                 if (statusText.StartsWith(mentionSelf, StringComparison.OrdinalIgnoreCase))
@@ -5550,6 +5612,9 @@ namespace OpenTween
                     return;
                 }
 
+                if (startup && versionInfo.Version <= SettingManager.Common.SkipUpdateVersion)
+                    return;
+
                 using (var dialog = new UpdateDialog())
                 {
                     dialog.SummaryText = string.Format(Properties.Resources.CheckNewVersionText3,
@@ -5559,6 +5624,11 @@ namespace OpenTween
                     if (dialog.ShowDialog(this) == DialogResult.Yes)
                     {
                         await this.OpenUriInBrowserAsync(versionInfo.DownloadUri.OriginalString);
+                    }
+                    else if (dialog.SkipButtonPressed)
+                    {
+                        SettingManager.Common.SkipUpdateVersion = versionInfo.Version;
+                        this.ModifySettingCommon = true;
                     }
                 }
             }
@@ -5602,12 +5672,7 @@ namespace OpenTween
         }
 
         public string createDetailHtml(string orgdata)
-        {
-            if (SettingManager.Local.UseTwemoji)
-                orgdata = EmojiFormatter.ReplaceEmojiToImg(orgdata);
-
-            return detailHtmlFormatHeader + orgdata + detailHtmlFormatFooter;
-        }
+            => detailHtmlFormatHeader + orgdata + detailHtmlFormatFooter;
 
         private Task DispSelectedPost()
             => this.DispSelectedPost(false);
@@ -5718,7 +5783,7 @@ namespace OpenTween
             }
         }
 
-        private ShortcutCommand[] shortcutCommands = new ShortcutCommand[0];
+        private ShortcutCommand[] shortcutCommands = Array.Empty<ShortcutCommand>();
 
         private void InitializeShortcuts()
         {
@@ -5965,45 +6030,11 @@ namespace OpenTween
 
                 ShortcutCommand.Create(Keys.Control | Keys.Up)
                     .FocusedOn(FocusedControl.StatusText)
-                    .Do(() => {
-                        if (!string.IsNullOrWhiteSpace(StatusText.Text))
-                        {
-                            var inReplyToStatusId = this.inReplyTo?.Item1;
-                            var inReplyToScreenName = this.inReplyTo?.Item2;
-                            _history[_hisIdx] = new StatusTextHistory(StatusText.Text, inReplyToStatusId, inReplyToScreenName);
-                        }
-                        _hisIdx -= 1;
-                        if (_hisIdx < 0) _hisIdx = 0;
-
-                        var historyItem = this._history[this._hisIdx];
-                        if (historyItem.inReplyToId != null)
-                            this.inReplyTo = Tuple.Create(historyItem.inReplyToId.Value, historyItem.inReplyToName);
-                        else
-                            this.inReplyTo = null;
-                        StatusText.Text = historyItem.status;
-                        StatusText.SelectionStart = StatusText.Text.Length;
-                    }),
+                    .Do(() => this.StatusTextHistoryBack()),
 
                 ShortcutCommand.Create(Keys.Control | Keys.Down)
                     .FocusedOn(FocusedControl.StatusText)
-                    .Do(() => {
-                        if (!string.IsNullOrWhiteSpace(StatusText.Text))
-                        {
-                            var inReplyToStatusId = this.inReplyTo?.Item1;
-                            var inReplyToScreenName = this.inReplyTo?.Item2;
-                            _history[_hisIdx] = new StatusTextHistory(StatusText.Text, inReplyToStatusId, inReplyToScreenName);
-                        }
-                        _hisIdx += 1;
-                        if (_hisIdx > _history.Count - 1) _hisIdx = _history.Count - 1;
-
-                        var historyItem = this._history[this._hisIdx];
-                        if (historyItem.inReplyToId != null)
-                            this.inReplyTo = Tuple.Create(historyItem.inReplyToId.Value, historyItem.inReplyToName);
-                        else
-                            this.inReplyTo = null;
-                        StatusText.Text = historyItem.status;
-                        StatusText.SelectionStart = StatusText.Text.Length;
-                    }),
+                    .Do(() => this.StatusTextHistoryForward()),
 
                 ShortcutCommand.Create(Keys.Control | Keys.PageUp, Keys.Control | Keys.P)
                     .FocusedOn(FocusedControl.StatusText)
@@ -6609,10 +6640,10 @@ namespace OpenTween
                     post.RetweetedBy == _anchorPost.ScreenName ||
                     post.ScreenName == _anchorPost.RetweetedBy ||
                     (!string.IsNullOrEmpty(post.RetweetedBy) && post.RetweetedBy == _anchorPost.RetweetedBy) ||
-                    _anchorPost.ReplyToList.Any(x => x.Item1 == post.UserId) ||
-                    _anchorPost.ReplyToList.Any(x => x.Item1 == post.RetweetedByUserId) ||
-                    post.ReplyToList.Any(x => x.Item1 == _anchorPost.UserId) ||
-                    post.ReplyToList.Any(x => x.Item1 == _anchorPost.RetweetedByUserId))
+                    _anchorPost.ReplyToList.Any(x => x.UserId == post.UserId) ||
+                    _anchorPost.ReplyToList.Any(x => x.UserId == post.RetweetedByUserId) ||
+                    post.ReplyToList.Any(x => x.UserId == _anchorPost.UserId) ||
+                    post.ReplyToList.Any(x => x.UserId == _anchorPost.RetweetedByUserId))
                 {
                     SelectListItem(_curList, idx);
                     _curList.EnsureVisible(idx);
@@ -6990,7 +7021,7 @@ namespace OpenTween
         private void TrimPostChain()
         {
             if (this.selectPostChains.Count <= 2000) return;
-            var p = new Stack<ValueTuple<TabPage, PostClass>>(2000);
+            var p = new Stack<(TabPage, PostClass)>(2000);
             for (int i = 0; i < 2000; i++)
             {
                 p.Push(this.selectPostChains.Pop());
@@ -7198,7 +7229,7 @@ namespace OpenTween
 
             var tabs = this.ListTab.TabPages.Cast<TabPage>()
                 .Select(x => this._statuses.Tabs[x.Text])
-                .Concat(new[] { this._statuses.GetTabByType(MyCommon.TabUsageType.Mute) });
+                .Append(this._statuses.GetTabByType(MyCommon.TabUsageType.Mute));
 
             foreach (var tab in tabs)
             {
@@ -7517,7 +7548,7 @@ namespace OpenTween
                         //空の場合
                         var inReplyToStatusId = this._curPost.RetweetedId ?? this._curPost.StatusId;
                         var inReplyToScreenName = this._curPost.ScreenName;
-                        this.inReplyTo = Tuple.Create(inReplyToStatusId, inReplyToScreenName);
+                        this.inReplyTo = (inReplyToStatusId, inReplyToScreenName);
 
                         // ステータステキストが入力されていない場合先頭に@ユーザー名を追加する
                         StatusText.Text = "@" + _curPost.ScreenName + " ";
@@ -7531,12 +7562,12 @@ namespace OpenTween
                             //1件選んでEnter or DoubleClick
                             if (StatusText.Text.Contains("@" + _curPost.ScreenName + " "))
                             {
-                                if (this.inReplyTo?.Item2 == _curPost.ScreenName)
+                                if (this.inReplyTo?.ScreenName == _curPost.ScreenName)
                                 {
                                     //返信先書き換え
                                     var inReplyToStatusId = this._curPost.RetweetedId ?? this._curPost.StatusId;
                                     var inReplyToScreenName = this._curPost.ScreenName;
-                                    this.inReplyTo = Tuple.Create(inReplyToStatusId, inReplyToScreenName);
+                                    this.inReplyTo = (inReplyToStatusId, inReplyToScreenName);
                                 }
                                 return;
                             }
@@ -7554,7 +7585,7 @@ namespace OpenTween
                                     // 単独リプライ
                                     var inReplyToStatusId = this._curPost.RetweetedId ?? this._curPost.StatusId;
                                     var inReplyToScreenName = this._curPost.ScreenName;
-                                    this.inReplyTo = Tuple.Create(inReplyToStatusId, inReplyToScreenName);
+                                    this.inReplyTo = (inReplyToStatusId, inReplyToScreenName);
                                     StatusText.Text = "@" + _curPost.ScreenName + " " + StatusText.Text;
                                 }
                             }
@@ -7647,16 +7678,16 @@ namespace OpenTween
                                 }
                                 if (isAll)
                                 {
-                                    foreach (string nm in post.ReplyToList.Select(x => x.Item2))
+                                    foreach (var (_, screenName) in post.ReplyToList)
                                     {
-                                        if (!ids.Contains("@" + nm + " ") &&
-                                            !nm.Equals(tw.Username, StringComparison.CurrentCultureIgnoreCase))
+                                        if (!ids.Contains("@" + screenName + " ") &&
+                                            !screenName.Equals(tw.Username, StringComparison.CurrentCultureIgnoreCase))
                                         {
-                                            Match m = Regex.Match(post.TextFromApi, "[@＠](?<id>" + nm + ")([^a-zA-Z0-9]|$)", RegexOptions.IgnoreCase);
+                                            Match m = Regex.Match(post.TextFromApi, "[@＠](?<id>" + screenName + ")([^a-zA-Z0-9]|$)", RegexOptions.IgnoreCase);
                                             if (m.Success)
                                                 ids += "@" + m.Result("${id}") + " ";
                                             else
-                                                ids += "@" + nm + " ";
+                                                ids += "@" + screenName + " ";
                                         }
                                     }
                                 }
@@ -7702,16 +7733,16 @@ namespace OpenTween
                             {
                                 ids += "@" + post.ScreenName + " ";
                             }
-                            foreach (string nm in post.ReplyToList.Select(x => x.Item2))
+                            foreach (var (_, screenName) in post.ReplyToList)
                             {
-                                if (!ids.Contains("@" + nm + " ") &&
-                                    !nm.Equals(tw.Username, StringComparison.CurrentCultureIgnoreCase))
+                                if (!ids.Contains("@" + screenName + " ") &&
+                                    !screenName.Equals(tw.Username, StringComparison.CurrentCultureIgnoreCase))
                                 {
-                                    Match m = Regex.Match(post.TextFromApi, "[@＠](?<id>" + nm + ")([^a-zA-Z0-9]|$)", RegexOptions.IgnoreCase);
+                                    Match m = Regex.Match(post.TextFromApi, "[@＠](?<id>" + screenName + ")([^a-zA-Z0-9]|$)", RegexOptions.IgnoreCase);
                                     if (m.Success)
                                         ids += "@" + m.Result("${id}") + " ";
                                     else
-                                        ids += "@" + nm + " ";
+                                        ids += "@" + screenName + " ";
                                 }
                             }
                             if (!string.IsNullOrEmpty(post.RetweetedBy))
@@ -7727,7 +7758,7 @@ namespace OpenTween
                                 //未入力の場合のみ返信先付加
                                 var inReplyToStatusId = this._curPost.RetweetedId ?? this._curPost.StatusId;
                                 var inReplyToScreenName = this._curPost.ScreenName;
-                                this.inReplyTo = Tuple.Create(inReplyToStatusId, inReplyToScreenName);
+                                this.inReplyTo = (inReplyToStatusId, inReplyToScreenName);
 
                                 StatusText.Text = ids;
                                 StatusText.SelectionStart = ids.Length;
@@ -8748,7 +8779,7 @@ namespace OpenTween
                             break;
 
                         case MyCommon.TabUsageType.DirectMessage:
-                            endpointName = "/direct_messages";
+                            endpointName = "/direct_messages/events/list";
                             break;
 
                         case MyCommon.TabUsageType.UserTimeline:
@@ -8793,7 +8824,7 @@ namespace OpenTween
                             update = tabType == MyCommon.TabUsageType.Favorites;
                             break;
 
-                        case "/direct_messages:":
+                        case "/direct_messages/events/list":
                             update = tabType == MyCommon.TabUsageType.DirectMessage;
                             break;
 
@@ -8903,7 +8934,7 @@ namespace OpenTween
 
             if (m != null)
             {
-                var inReplyToScreenName = this.inReplyTo.Item2;
+                var inReplyToScreenName = this.inReplyTo.Value.ScreenName;
                 if (StatusText.StartsWith("@", StringComparison.Ordinal))
                 {
                     if (StatusText.StartsWith("@" + inReplyToScreenName, StringComparison.Ordinal)) return;
@@ -10468,7 +10499,7 @@ namespace OpenTween
                 // 投稿時に in_reply_to_status_id を付加する
                 var inReplyToStatusId = this._curPost.RetweetedId ?? this._curPost.StatusId;
                 var inReplyToScreenName = this._curPost.ScreenName;
-                this.inReplyTo = Tuple.Create(inReplyToStatusId, inReplyToScreenName);
+                this.inReplyTo = (inReplyToStatusId, inReplyToScreenName);
 
                 StatusText.Text += " RT @" + _curPost.ScreenName + ": " + rtdata;
 
@@ -11406,9 +11437,7 @@ namespace OpenTween
             }
         }
 
-        private int userStreamsRefreshing = 0;
-
-        private async void tw_NewPostFromStream(object sender, EventArgs e)
+        private void tw_NewPostFromStream(object sender, EventArgs e)
         {
             if (SettingManager.Common.ReadOldPosts)
             {
@@ -11417,21 +11446,7 @@ namespace OpenTween
 
             this._statuses.DistributePosts();
 
-            if (SettingManager.Common.UserstreamPeriod > 0) return;
-
-            // userStreamsRefreshing が 0 (インクリメント後は1) であれば RefreshTimeline を実行
-            if (Interlocked.Increment(ref this.userStreamsRefreshing) == 1)
-            {
-                try
-                {
-                    await this.InvokeAsync(() => this.RefreshTimeline())
-                        .ConfigureAwait(false);
-                }
-                finally
-                {
-                    Interlocked.Exchange(ref this.userStreamsRefreshing, 0);
-                }
-            }
+            this.RefreshThrottlingTimer.Invoke();
         }
 
         private async void tw_UserStreamStarted(object sender, EventArgs e)

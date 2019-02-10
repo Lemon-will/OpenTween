@@ -47,7 +47,7 @@ namespace OpenTween.Properties {
         }
         
         /// <summary>
-        ///   厳密に型指定されたこのリソース クラスを使用して、すべての検索リソースに対し、
+        ///   すべてについて、現在のスレッドの CurrentUICulture プロパティをオーバーライドします
         ///   現在のスレッドの CurrentUICulture プロパティをオーバーライドします。
         /// </summary>
         [global::System.ComponentModel.EditorBrowsableAttribute(global::System.ComponentModel.EditorBrowsableState.Advanced)]
@@ -652,18 +652,18 @@ namespace OpenTween.Properties {
         /// <summary>
         ///   更新履歴
         ///
-        ///==== Ver 2.0.2-dev(2018/xx/xx)
+        ///==== Ver 2.2.0(2018/11/03)
+        /// * NEW: 絵文字に関する文字数カウントの新仕様に対応しました
+        ///  - この変更により「👩‍👧‍👦」「👨‍🎨」など複数の文字で構成される絵文字を入力した場合の文字数制限が緩和されます
+        /// * NEW: Twemoji 11.2.0 に対応しました
+        ///  - Unicode 11.0 で追加された絵文字が表示されるようになります
+        /// * NEW: ツイートの投稿に失敗し再試行せずにキャンセルした場合は、発言入力欄に未投稿のテキストを復元します
+        /// * NEW: アップデート通知のダイアログに「このバージョンを無視」ボタンを追加しました
+        /// * FIX: ユーザー情報ダイアログでbioに絵文字を含む場合にハッシュタグやメンションのリンク範囲がずれる不具合を修正
+        /// * FIX: 投稿時取得の設定がオンの場合に、投稿したRTがタイムラインに反映されないことがある不具合を修正
         ///
-        ///==== Ver 2.0.1(2018/06/13)
-        /// * Windows 8.1 以降で OpenTween v2.0.0 を使用している方は v2.0.1 へのアップデートは不要です
-        ///
-        /// * FIX: 起動時に .NET Framework 4.7.2 のバージョンチェックが正しく行われるように修正
-        /// * FIX: Windows 7 で TLS1.1/TLS1.2 が有効にならない不具合を修正 (thx @hetaroh!)
-        ///
-        ///==== Ver 2.0.0(2018/06/11)
-        /// * このバージョン以降のOpenTweenは .NET Framework 4.7.2 以上が必須になります
-        ///  - .NET Framework 4.7.2 のインストーラーは https://go.microsoft.com/fwlink/?LinkId=863262 から入手できます
-        ///  - Windows 10 April 2018 Update には標準で .NET Framework 4.7.2 が含まれているた [残りの文字列は切り詰められました]&quot;; に類似しているローカライズされた文字列を検索します。
+        ///==== Ver 2.1.2(2018/09/30)
+        /// * CHG: 投稿時取得の設定がオフでも、投稿した内容を即時タイムラインに反映させるようにし [残りの文字列は切り詰められました]&quot;; に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string ChangeLog {
             get {

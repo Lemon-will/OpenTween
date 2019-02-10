@@ -57,9 +57,7 @@ namespace OpenTween.Models
 
             progress.Report(string.Format(Properties.Resources.GetTimelineWorker_RunWorkerCompletedText8, backward ? -1 : 1));
 
-            await tw.GetDirectMessageApi(read, MyCommon.WORKERTYPE.DirectMessegeRcv, backward)
-                .ConfigureAwait(false);
-            await tw.GetDirectMessageApi(read, MyCommon.WORKERTYPE.DirectMessegeSnt, backward)
+            await tw.GetDirectMessageEvents(read, backward)
                 .ConfigureAwait(false);
 
             TabInformations.GetInstance().DistributePosts();

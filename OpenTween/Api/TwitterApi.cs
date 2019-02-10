@@ -381,55 +381,17 @@ namespace OpenTween.Api
             return this.apiConnection.PostLazyAsync<TwitterUser>(endpoint, param);
         }
 
-        public Task<TwitterDirectMessage[]> DirectMessagesRecv(int? count = null, long? maxId = null, long? sinceId = null)
+        public Task<TwitterMessageEventList> DirectMessagesEventsList(int? count = null, string cursor = null)
         {
-            var endpoint = new Uri("direct_messages.json", UriKind.Relative);
-            var param = new Dictionary<string, string>
-            {
-                ["full_text"] = "true",
-                ["include_entities"] = "true",
-                ["include_ext_alt_text"] = "true",
-            };
+            var endpoint = new Uri("direct_messages/events/list.json", UriKind.Relative);
+            var param = new Dictionary<string, string>();
 
             if (count != null)
                 param["count"] = count.ToString();
-            if (maxId != null)
-                param["max_id"] = maxId.ToString();
-            if (sinceId != null)
-                param["since_id"] = sinceId.ToString();
+            if (cursor != null)
+                param["cursor"] = cursor;
 
-            return this.apiConnection.GetAsync<TwitterDirectMessage[]>(endpoint, param, "/direct_messages");
-        }
-
-        public Task<TwitterDirectMessage[]> DirectMessagesSent(int? count = null, long? maxId = null, long? sinceId = null)
-        {
-            var endpoint = new Uri("direct_messages/sent.json", UriKind.Relative);
-            var param = new Dictionary<string, string>
-            {
-                ["full_text"] = "true",
-                ["include_entities"] = "true",
-                ["include_ext_alt_text"] = "true",
-            };
-
-            if (count != null)
-                param["count"] = count.ToString();
-            if (maxId != null)
-                param["max_id"] = maxId.ToString();
-            if (sinceId != null)
-                param["since_id"] = sinceId.ToString();
-
-            return this.apiConnection.GetAsync<TwitterDirectMessage[]>(endpoint, param, "/direct_messages/sent");
-        }
-
-        public Task<LazyJson<TwitterDirectMessage>> DirectMessagesDestroy(long statusId)
-        {
-            var endpoint = new Uri("direct_messages/destroy.json", UriKind.Relative);
-            var param = new Dictionary<string, string>
-            {
-                ["id"] = statusId.ToString(),
-            };
-
-            return this.apiConnection.PostLazyAsync<TwitterDirectMessage>(endpoint, param);
+            return this.apiConnection.GetAsync<TwitterMessageEventList>(endpoint, param, "/direct_messages/events/list");
         }
 
         public Task DirectMessagesEventsNew(long recipientId, string text, long? mediaId = null)
@@ -465,6 +427,20 @@ namespace OpenTween.Api
             return this.apiConnection.PostJsonAsync(endpoint, json);
         }
 
+        public Task DirectMessagesEventsDestroy(string eventId)
+        {
+            var endpoint = new Uri("direct_messages/events/destroy.json", UriKind.Relative);
+            var param = new Dictionary<string, string>
+            {
+                ["id"] = eventId.ToString(),
+            };
+
+            // なぜか application/x-www-form-urlencoded でパラメーターを送ると Bad Request になる謎仕様
+            endpoint = new Uri(endpoint.OriginalString + "?" + MyCommon.BuildQueryString(param), UriKind.Relative);
+
+            return this.apiConnection.DeleteAsync(endpoint);
+        }
+
         public Task<TwitterUser> UsersShow(string screenName)
         {
             var endpoint = new Uri("users/show.json", UriKind.Relative);
@@ -477,6 +453,20 @@ namespace OpenTween.Api
             };
 
             return this.apiConnection.GetAsync<TwitterUser>(endpoint, param, "/users/show/:id");
+        }
+
+        public Task<TwitterUser[]> UsersLookup(IReadOnlyList<string> userIds)
+        {
+            var endpoint = new Uri("users/lookup.json", UriKind.Relative);
+            var param = new Dictionary<string, string>
+            {
+                ["user_id"] = string.Join(",", userIds),
+                ["include_entities"] = "true",
+                ["include_ext_alt_text"] = "true",
+                ["tweet_mode"] = "extended",
+            };
+
+            return this.apiConnection.GetAsync<TwitterUser[]>(endpoint, param, "/users/lookup");
         }
 
         public Task<LazyJson<TwitterUser>> UsersReportSpam(string screenName)
@@ -778,7 +768,7 @@ namespace OpenTween.Api
             return this.apiConnection.PostJsonAsync(endpoint, json);
         }
 
-        public Task<Stream> UserStreams(string replies = null, string track = null)
+        public TwitterStreamObservable UserStreams(string replies = null, string track = null)
         {
             var endpoint = new Uri("https://userstream.twitter.com/1.1/user.json");
             var param = new Dictionary<string, string>();
@@ -788,7 +778,10 @@ namespace OpenTween.Api
             if (!string.IsNullOrEmpty(track))
                 param["track"] = track;
 
-            return this.apiConnection.GetStreamingStreamAsync(endpoint, param);
+            Task<Stream> openStream()
+                => this.apiConnection.GetStreamingStreamAsync(endpoint, param);
+
+            return new TwitterStreamObservable(openStream);
         }
 
         public OAuthEchoHandler CreateOAuthEchoHandler(Uri authServiceProvider, Uri realm = null)

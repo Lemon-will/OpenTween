@@ -1,5 +1,5 @@
 ﻿// OpenTween - Client of Twitter
-// Copyright (c) 2016 kim_upsilon (@kim_upsilon) <https://upsilo.net/~upsilon/>
+// Copyright (c) 2018 kim_upsilon (@kim_upsilon) <https://upsilo.net/~upsilon/>
 // All rights reserved.
 //
 // This file is part of OpenTween.
@@ -19,26 +19,34 @@
 // the Free Software Foundation, Inc., 51 Franklin Street - Fifth Floor,
 // Boston, MA 02110-1301, USA.
 
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Xunit;
 
-namespace OpenTween.Models
+namespace OpenTween.Api.DataModel
 {
-    public class LocalSearchTabModel : InternalStorageTabModel
+    public class TwitterMessageEventListTest
     {
-        public override MyCommon.TabUsageType TabType
-            => MyCommon.TabUsageType.SearchResults;
-
-        public override bool IsPermanentTabType => false;
-
-        public LocalSearchTabModel(string tabName) : base(tabName)
+        [Fact]
+        public void Deserialize_AppsTest()
         {
-        }
+            var json = @"{
+  ""events"": [],
+  ""apps"": {
+    ""258901"": {
+      ""id"": ""258901"",
+      ""name"": ""Twitter for Android"",
+      ""url"": ""http://twitter.com/download/android""
+    }
+  }
+}";
+            var result = MyCommon.CreateDataFromJson<TwitterMessageEventList>(json);
+            Assert.Single(result.Apps);
 
-        public override Task RefreshAsync(Twitter tw, bool backward, bool startup, IProgress<string> progress)
-            => Task.CompletedTask; // 何もしない
+            var (key, app) = result.Apps.Single();
+            Assert.Equal("258901", key);
+            Assert.Equal("258901", app.Id);
+            Assert.Equal("Twitter for Android", app.Name);
+            Assert.Equal("http://twitter.com/download/android", app.Url);
+        }
     }
 }

@@ -73,6 +73,7 @@
     <Compile Include="Api\DataModel\TwitterError.cs" />
     <Compile Include="Api\DataModel\TwitterFriendship.cs" />
     <Compile Include="Api\DataModel\TwitterList.cs" />
+    <Compile Include="Api\DataModel\TwitterMessageEvent.cs" />
     <Compile Include="Api\DataModel\TwitterPageable.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -81,6 +82,7 @@
     <Compile Include="Api\DataModel\TwitterSearchResult.cs" />
     <Compile Include="Api\DataModel\TwitterStatus.cs" />
     <Compile Include="Api\DataModel\TwitterStreamEvent.cs" />
+    <Compile Include="Api\DataModel\TwitterStreamMessage.cs" />
     <Compile Include="Api\DataModel\TwitterTextConfiguration.cs" />
     <Compile Include="Api\DataModel\TwitterUploadMediaResult.cs" />
     <Compile Include="Api\DataModel\TwitterUser.cs" />
@@ -89,6 +91,7 @@
     <Compile Include="Api\TwitterApi.cs" />
     <Compile Include="Api\TwitterApiException.cs" />
     <Compile Include="Api\TwitterApiStatus.cs" />
+    <Compile Include="Api\TwitterStreamObservable.cs" />
     <Compile Include="ApplicationEvents.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -123,7 +126,6 @@
     <Compile Include="Connection\OAuthUtility.cs" />
     <Compile Include="Connection\TwitterApiConnection.cs" />
     <Compile Include="DateTimeUtc.cs" />
-    <Compile Include="EmojiFormatter.cs" />
     <Compile Include="EventViewerDialog.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -182,6 +184,7 @@
     </Compile>
     <Compile Include="Setting\SettingManager.cs" />
     <Compile Include="ShortcutCommand.cs" />
+    <Compile Include="ThrottlingTimer.cs" />
     <Compile Include="Thumbnail\Services\PbsTwimgCom.cs" />
     <Compile Include="TweetDetailsView.cs">
       <SubType>UserControl</SubType>

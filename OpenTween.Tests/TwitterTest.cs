@@ -447,7 +447,6 @@ namespace OpenTween
 
             var timeline = SettingManager.Common.CountApi;
             var reply = SettingManager.Common.CountApiReply;
-            var dm = 20;  // DMは固定値
             var more = SettingManager.Common.MoreCountApi;
             var startup = SettingManager.Common.FirstCountApi;
             var favorite = SettingManager.Common.FavoritesCountApi;
@@ -470,10 +469,6 @@ namespace OpenTween
             Assert.Equal(timeline, Twitter.GetApiResultCount(MyCommon.WORKERTYPE.Timeline, false, false));
             Assert.Equal(reply, Twitter.GetApiResultCount(MyCommon.WORKERTYPE.Reply, false, false));
 
-            // DM
-            Assert.Equal(dm, Twitter.GetApiResultCount(MyCommon.WORKERTYPE.DirectMessegeRcv, false, false));
-            Assert.Equal(dm, Twitter.GetApiResultCount(MyCommon.WORKERTYPE.DirectMessegeSnt, false, false));
-
             // その他はTimelineと同値になる
             Assert.Equal(timeline, Twitter.GetApiResultCount(MyCommon.WORKERTYPE.Favorites, false, false));
             Assert.Equal(timeline, Twitter.GetApiResultCount(MyCommon.WORKERTYPE.List, false, false));
@@ -491,7 +486,6 @@ namespace OpenTween
 
             var timeline = SettingManager.Common.CountApi;
             var reply = SettingManager.Common.CountApiReply;
-            var dm = 20;  // DMは固定値
             var more = SettingManager.Common.MoreCountApi;
             var startup = SettingManager.Common.FirstCountApi;
             var favorite = SettingManager.Common.FavoritesCountApi;
@@ -510,10 +504,6 @@ namespace OpenTween
             Assert.Equal(reply, Twitter.GetApiResultCount(MyCommon.WORKERTYPE.Reply, false, false));
             Assert.Equal(more, Twitter.GetApiResultCount(MyCommon.WORKERTYPE.Reply, true, false));
             Assert.Equal(reply, Twitter.GetApiResultCount(MyCommon.WORKERTYPE.Reply, false, true));  //Replyの値が使われる
-
-            // DM
-            Assert.Equal(dm, Twitter.GetApiResultCount(MyCommon.WORKERTYPE.DirectMessegeRcv, false, false));
-            Assert.Equal(dm, Twitter.GetApiResultCount(MyCommon.WORKERTYPE.DirectMessegeSnt, false, false));
 
             // Favorites
             Assert.Equal(favorite, Twitter.GetApiResultCount(MyCommon.WORKERTYPE.Favorites, false, false));
@@ -635,6 +625,26 @@ namespace OpenTween
             {
                 Assert.Equal(278, twitter.GetTextLengthRemain("🍣"));
                 Assert.Equal(267, twitter.GetTextLengthRemain("🔥🐔🔥 焼き鳥"));
+            }
+        }
+
+        [Fact]
+        public void GetTextLengthRemain_EmojiTest()
+        {
+            using (var twitter = new Twitter())
+            {
+                // 絵文字の文字数カウントの仕様変更に対するテストケース
+                // https://twittercommunity.com/t/114607
+
+                Assert.Equal(279, twitter.GetTextLengthRemain("©")); // 基本多言語面の絵文字
+                Assert.Equal(277, twitter.GetTextLengthRemain("©\uFE0E")); // 異字体セレクタ付き (text style)
+                Assert.Equal(279, twitter.GetTextLengthRemain("©\uFE0F")); // 異字体セレクタ付き (emoji style)
+                Assert.Equal(278, twitter.GetTextLengthRemain("🍣")); // 拡張面の絵文字
+                Assert.Equal(279, twitter.GetTextLengthRemain("#⃣")); // 合字で表現される絵文字
+                Assert.Equal(278, twitter.GetTextLengthRemain("👦\U0001F3FF")); // Emoji modifier 付きの絵文字
+                Assert.Equal(278, twitter.GetTextLengthRemain("\U0001F3FF")); // Emoji modifier 単体
+                Assert.Equal(278, twitter.GetTextLengthRemain("👨\u200D🎨")); // ZWJ で結合された絵文字
+                Assert.Equal(278, twitter.GetTextLengthRemain("🏃\u200D♀\uFE0F")); // ZWJ と異字体セレクタを含む絵文字
             }
         }
 
