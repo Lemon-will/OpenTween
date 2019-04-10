@@ -88,7 +88,7 @@ namespace OpenTween
         /// <remarks>
         /// Tween の Wiki ページのコンテンツはプロプライエタリなため転載不可
         /// </remarks>
-        public const string ShortcutKeyUrl = "http://sourceforge.jp/projects/tween/wiki/%E3%82%B7%E3%83%A7%E3%83%BC%E3%83%88%E3%82%AB%E3%83%83%E3%83%88%E3%82%AD%E3%83%BC";
+        public const string ShortcutKeyUrl = "https://ja.osdn.net/projects/tween/wiki/%E3%82%B7%E3%83%A7%E3%83%BC%E3%83%88%E3%82%AB%E3%83%83%E3%83%88%E3%82%AD%E3%83%BC";
 
         //=====================================================================
         // アップデートチェック関連
