@@ -19,6 +19,8 @@
 // the Free Software Foundation, Inc., 51 Franklin Street - Fifth Floor,
 // Boston, MA 02110-1301, USA.
 
+#nullable enable annotations
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -34,14 +36,11 @@ namespace OpenTween.Api.DataModel
     [DataContract]
     public class TwitterUser
     {
-        [DataMember(Name = "contributors_enabled")]
-        public bool ContributorsEnabled { get; set; }
-
         [DataMember(Name = "created_at")]
         public string CreatedAt { get; set; }
 
         [DataMember(Name = "description")]
-        public string Description { get; set; } // Nullable
+        public string? Description { get; set; }
 
         [DataMember(Name = "default_profile")]
         public bool DefaultProfile { get; set; }
@@ -50,23 +49,20 @@ namespace OpenTween.Api.DataModel
         public bool DefaultProfileImage { get; set; }
 
         [DataMember(Name = "entities", IsRequired = false)]
-        public TwitterUser.TwitterUserEntity Entities { get; set; }
+        public TwitterUser.TwitterUserEntity? Entities { get; set; }
 
         [DataContract]
         public class TwitterUserEntity
         {
             [DataMember(Name = "url", IsRequired = false)]
-            public TwitterEntities Url { get; set; }
+            public TwitterEntities? Url { get; set; }
 
             [DataMember(Name = "description", IsRequired = false)]
-            public TwitterEntities Description { get; set; }
+            public TwitterEntities? Description { get; set; }
         }
 
         [DataMember(Name = "favourites_count")]
         public int FavouritesCount { get; set; }
-
-        [DataMember(Name = "follow_request_sent")]
-        public bool? FollowRequestSent { get; set; }
 
         [DataMember(Name = "followers_count")]
         public int FollowersCount { get; set; }
@@ -74,56 +70,26 @@ namespace OpenTween.Api.DataModel
         [DataMember(Name = "friends_count")]
         public int FriendsCount { get; set; }
 
-        [DataMember(Name = "geo_enabled")]
-        public bool GeoEnabled { get; set; }
-
         [DataMember(Name = "id")]
         public long Id { get; set; }
 
         [DataMember(Name = "id_str")]
         public string IdStr { get; set; }
 
-        [DataMember(Name = "lang")]
-        public string Lang { get; set; }
-
         [DataMember(Name = "listed_count")]
         public int? ListedCount { get; set; }
 
         [DataMember(Name = "location")]
-        public string Location { get; set; } // Nullable
+        public string? Location { get; set; }
 
         [DataMember(Name = "name")]
         public string Name { get; set; }
-
-        [DataMember(Name = "profile_background_color")]
-        public string ProfileBackgroundColor { get; set; }
-
-        [DataMember(Name = "profile_background_image_url_https")]
-        public string ProfileBackgroundImageUrlHttps { get; set; }
-
-        [DataMember(Name = "profile_background_tile")]
-        public bool ProfileBackgroundTile { get; set; }
 
         [DataMember(Name = "profile_banner_url")]
         public string ProfileBannerUrl { get; set; }
 
         [DataMember(Name = "profile_image_url_https")]
         public string ProfileImageUrlHttps { get; set; }
-
-        [DataMember(Name = "profile_link_color")]
-        public string ProfileLinkColor { get; set; }
-
-        [DataMember(Name = "profile_sidebar_border_color")]
-        public string ProfileSidebarBorderColor { get; set; }
-
-        [DataMember(Name = "profile_sidebar_fill_color")]
-        public string ProfileSidebarFillColor { get; set; }
-
-        [DataMember(Name = "profile_text_color")]
-        public string ProfileTextColor { get; set; }
-
-        [DataMember(Name = "profile_use_background_image")]
-        public bool ProfileUseBackgroundImage { get; set; }
 
         [DataMember(Name = "protected")]
         public bool Protected { get; set; }
@@ -135,24 +101,19 @@ namespace OpenTween.Api.DataModel
         public bool ShowAllInlineMedia { get; set; }
 
         [DataMember(Name = "status", IsRequired = false)]
-        public TwitterStatus Status { get; set; } // Nullable
+        public TwitterStatus? Status { get; set; }
 
         [DataMember(Name = "statuses_count")]
         public int StatusesCount { get; set; }
 
         [DataMember(Name = "url")]
-        public string Url { get; set; } // Nullable
-
-        [DataMember(Name = "utc_offset")]
-        public int? UtcOffset { get; set; }
+        public string? Url { get; set; }
 
         [DataMember(Name = "verified")]
         public bool Verified { get; set; }
 
         /// <exception cref="SerializationException"/>
         public static TwitterUser ParseJson(string json)
-        {
-            return MyCommon.CreateDataFromJson<TwitterUser>(json);
-        }
+            => MyCommon.CreateDataFromJson<TwitterUser>(json);
     }
 }

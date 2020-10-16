@@ -60,6 +60,32 @@ namespace OpenTween
         }
 
         [Theory]
+        [InlineData("aaa", new string[0], -1)]
+        [InlineData("aaa", new[] { "aaa" }, 0)]
+        [InlineData("bbb", new[] { "aaa" }, -1)]
+        [InlineData("bbb", new[] { "aaa", "bbb" }, 1)]
+        public void FindIndex_Test(string item, string[] array, int expected)
+        {
+            // このテストでは items が List<T> または T[] のインスタンスと認識されないようにする
+            var items = new LinkedList<string>(array).AsEnumerable();
+            Assert.Equal(expected, items.FindIndex(x => x == item));
+        }
+
+        [Fact]
+        public void FindIndex_ListTest()
+        {
+            var items = new List<string> { "aaa", "bbb" }.AsEnumerable();
+            Assert.Equal(1, items.FindIndex(x => x == "bbb"));
+        }
+
+        [Fact]
+        public void FindIndex_ArrayTest()
+        {
+            var items = new[] { "aaa", "bbb" }.AsEnumerable();
+            Assert.Equal(1, items.FindIndex(x => x == "bbb"));
+        }
+
+        [Theory]
         [InlineData("abc", new int[] { 'a', 'b', 'c' })]
         [InlineData("🍣", new int[] { 0x1f363 })] // サロゲートペア
         public void ToCodepoints_Test(string s, int[] expected)
@@ -77,7 +103,7 @@ namespace OpenTween
 
         [Fact]
         public void ToCodepoints_ErrorTest()
-            => Assert.Throws<ArgumentNullException>(() => ((string)null).ToCodepoints());
+            => Assert.Throws<ArgumentNullException>(() => ((string)null!).ToCodepoints());
 
         [Theory]
         [InlineData("", 0, 0, 0)]
@@ -92,7 +118,7 @@ namespace OpenTween
         [Fact]
         public void GetCodepointCount_ErrorTest()
         {
-            Assert.Throws<ArgumentNullException>(() => ((string)null).GetCodepointCount(0, 0));
+            Assert.Throws<ArgumentNullException>(() => ((string)null!).GetCodepointCount(0, 0));
             Assert.Throws<ArgumentOutOfRangeException>(() => "abc".GetCodepointCount(-1, 3));
             Assert.Throws<ArgumentOutOfRangeException>(() => "abc".GetCodepointCount(0, 4));
             Assert.Throws<ArgumentOutOfRangeException>(() => "abc".GetCodepointCount(4, 5));

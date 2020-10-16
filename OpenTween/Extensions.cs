@@ -19,6 +19,8 @@
 // the Free Software Foundation, Inc., 51 Franklin Street - Fifth Floor,
 // Boston, MA 02110-1301, USA.
 
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -68,6 +70,34 @@ namespace OpenTween
             return false;
         }
 
+        public static int FindIndex<T>(this IEnumerable<T> enumerable, Predicate<T> finder)
+        {
+            if (enumerable is List<T> list)
+                return list.FindIndex(finder);
+
+            if (enumerable is T[] array)
+                return Array.FindIndex(array, finder);
+
+            var index = 0;
+
+            foreach (var item in enumerable)
+            {
+                if (finder(item))
+                    return index;
+
+                index++;
+            }
+
+            return -1;
+        }
+
+        public static IEnumerable<(T Value, int Index)> WithIndex<T>(this IEnumerable<T> enumerable)
+        {
+            var i = 0;
+            foreach (var value in enumerable)
+                yield return (value, i++);
+        }
+
         public static void Deconstruct<TKey, TValue>(this KeyValuePair<TKey, TValue> kvp, out TKey key, out TValue value)
         {
             key = kvp.Key;
@@ -82,7 +112,7 @@ namespace OpenTween
             if (s == null)
                 throw new ArgumentNullException(nameof(s));
 
-            IEnumerable<int> GetEnumerable(string input)
+            static IEnumerable<int> GetEnumerable(string input)
             {
                 var i = 0;
                 var length = input.Length;
@@ -140,8 +170,8 @@ namespace OpenTween
         public static async Task ForEachAsync<T>(this IObservable<T> observable, Func<T, Task> subscriber, CancellationToken cancellationToken)
         {
             var observer = new ForEachObserver<T>(subscriber);
+            using var unsubscriber = observable.Subscribe(observer);
 
-            using (var unsubscriber = observable.Subscribe(observer))
             using (cancellationToken.Register(() => unsubscriber.Dispose()))
                 await observer.Task.ConfigureAwait(false);
         }

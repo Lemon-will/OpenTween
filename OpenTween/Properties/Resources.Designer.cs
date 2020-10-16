@@ -19,7 +19,7 @@ namespace OpenTween.Properties {
     // または Visual Studio のようなツールを使用して自動生成されました。
     // メンバーを追加または削除するには、.ResX ファイルを編集して、/str オプションと共に
     // ResGen を実行し直すか、または VS プロジェクトをビルドし直します。
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "15.0.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "16.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
     internal class Resources {
@@ -652,16 +652,21 @@ namespace OpenTween.Properties {
         /// <summary>
         ///   更新履歴
         ///
-        ///==== Ver 2.3.0(2019/04/08)
-        /// * CHG: 投稿欄にフォーカスしている間は一部のショートカットを無効にします (thx @pitermach, @lukaszgo1!)
-        ///  - 対象となるショートカットは Ctrl+Alt+S (Fav+RT), Ctrl+Alt+R (Fav+非公式RT), Ctrl+Alt+H (ユーザー指定のURLを開く) の3つです
-        ///  - AltGrキーを使う言語のキーボートとショートカットキーが重複する問題への対処です
-        /// * CHG: Microsoft Translator Text API v3 に対応
-        ///  - OpenTweenの古いバージョンの翻訳機能は 2019/4/30 以降に使用できなくなります
-        /// * CHG: 短縮URLの展開時にHTTPSが使用できるドメインは強制的にHTTPSを使用する
-        /// * CHG: 廃止された短縮URLサービスのドメインをURL展開の対象から削除
-        /// * CHG: 短縮URLで生成されるURLがHTTPSになるように変更
-        /// * CHG: 廃止された twurl.nl によるURL短縮 [残りの文字列は切り詰められました]&quot;; に類似しているローカライズされた文字列を検索します。
+        ///==== Ver 2.4.4-dev(2019/xx/xx)
+        ///
+        ///==== Ver 2.4.3(2019/12/06)
+        /// * FIX: 関連発言表示のタブを読み込み中に閉じるとエラーが発生する不具合を修正
+        /// * FIX: 操作メニューの「タブ振り分けルール作成」から新規タブを作成するとエラーが発生する不具合を修正
+        ///
+        ///==== Ver 2.4.2(2019/10/23)
+        /// * FIX: タブ更新時にエラーが発生するとプロセスが異常終了する場合がある不具合を修正
+        /// * FIX: エラー発生時にステータスバーの縦幅が2行分に広がり戻らなくなる場合がある不具合を修正
+        /// * FIX: 表示中のタブの名前を変更するとエラーが発生する不具合を修正
+        ///
+        ///==== Ver 2.4.1(2019/09/25)
+        /// * FIX: 「タブを一覧の下に表示する」を無効にすると起動時にエラーが発生する不具合を修正 (thx @mulsys!)
+        /// * FIX: 発言一覧の選択状態が正しく描画されない不具合を修正
+        /// * FIX: 更新間隔を0秒に設定した場合に自動更新が停止されない不具合を修正 (thx [残りの文字列は切り詰められました]&quot;; に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string ChangeLog {
             get {

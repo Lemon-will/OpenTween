@@ -24,6 +24,8 @@
 // the Free Software Foundation, Inc., 51 Franklin Street - Fifth Floor,
 // Boston, MA 02110-1301, USA.
 
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -69,7 +71,7 @@ namespace OpenTween.OpenTweenCustomControl
                 => Timestamp.ToLocalTime().ToString("T") + ": " + Summary;
         }
 
-        LinkedList<LogEntry> _logs;
+        readonly LinkedList<LogEntry> _logs;
 
         const int MAXCNT = 20;
 
@@ -78,12 +80,13 @@ namespace OpenTween.OpenTweenCustomControl
             get => base.Text;
             set
             {
-                _logs.AddLast(new LogEntry(DateTimeUtc.Now, value));
+                var oneline = value.Replace("\n", " ");
+                _logs.AddLast(new LogEntry(DateTimeUtc.Now, oneline));
                 while (_logs.Count > MAXCNT)
                 {
                     _logs.RemoveFirst();
                 }
-                base.Text = value;
+                base.Text = oneline;
             }
         }
 
@@ -91,8 +94,8 @@ namespace OpenTween.OpenTweenCustomControl
         {
             get
             {
-                StringBuilder sb = new StringBuilder();
-                foreach (LogEntry e in _logs)
+                var sb = new StringBuilder();
+                foreach (var e in _logs)
                 {
                     sb.AppendLine(e.ToString());
                 }
